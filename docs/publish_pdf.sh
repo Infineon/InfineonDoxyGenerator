@@ -20,12 +20,10 @@ make
 if [ -f "${REPO_NAME}.pdf" ]; then  
   # under root dir of well-automated-documentation
   cd ..
-  pwd
   git config --global push.default simple
   git config user.name "$USR_NAME"
   git config user.email $USR_EMAIL
 
-  rm "${REPO_NAME}.pdf"
   cp docs/"${REPO_NAME}.pdf" .
   git add "${REPO_NAME}.pdf"
   git commit -m "doc update by commit ${TRAVIS_COMMIT}"
