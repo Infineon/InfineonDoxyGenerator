@@ -1,5 +1,5 @@
 #GH_REPO_REF=github.com/$PRIVATE_NAME/$REPO_NAME.git
-GH_REPO_REF=github.com/Infineon/well-automated-documentation.git
+GH_REPO_REF=github.com/Infineon/InfineonDoxyGenerator.git
 #install texlive (instead of miktex)
 sudo apt-get -qq update && sudo apt-get install -y --no-install-recommends texlive-full
 
