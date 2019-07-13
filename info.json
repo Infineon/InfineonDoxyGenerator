@@ -1,0 +1,10 @@
+{
+    "name": "Infineon Doxygen Generator",
+    "description": "Command Line Tool for Infineon C/C++ Libraries Doxygen documentation",
+    "repository" : {
+        "type" : "git",
+        "url": "https://github.com/Infineon/InfineonDoxyGenerator.git"
+    },
+    "version" : "1.0.0",
+    "license" : "MIT"
+}

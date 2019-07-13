@@ -3,14 +3,12 @@ import argparse, os, shutil, subprocess
 doxygen_exe  = 'doxygen'
 git_exe      = 'git'
 
-lib_root  = './..'
+lib_root  = os.path.abspath(os.pardir)
 docs_dir  = lib_root + '/docs'
 img_dir   = lib_root + '/docs/img'
 src_dir   = lib_root + '/src'
 doxy_dir  = lib_root + '/docs/doxygen'
 build_dir = lib_root + '/docs/doxygen/build'   
-
-global lib_version 
 
 def get_os():
     pass
@@ -21,16 +19,21 @@ def check_new_tag():
 def get_toolchain_ver():
     git_exe     = 'git'
     doxygen_exe = 'doxygen'
-    # latex_exe   = 'textlive'
-    # grviz_exe   = 'graphviz'
+    latex_exe   = 'textlive'
+    grviz_exe   = 'graphviz'
+    print("Git      (required):")
     git_proc = subprocess.Popen([git_exe,'--version'])
     git_proc.wait()
+    print("Doxygen  (required):")
     doxy_proc = subprocess.Popen([doxygen_exe,'--version'])
     doxy_proc.wait()
-    # latex_proc = subprocess.Popen([latex_exe,'version'])
-    # latex_proc.wait()
-    # grviz_proc = subprocess.Popen([grviz_exe,'version'])
-    # grviz_proc.wait()
+    print('Latex    (required for pdf):')
+    latex_proc = subprocess.Popen([latex_exe,'version'])
+    latex_proc.wait()
+    print('Graphviz (optional):')
+    grviz_proc = subprocess.Popen([grviz_exe,'version'])
+    grviz_proc.wait()
+
 
 def toolchain_install():
     pass
@@ -59,9 +62,7 @@ def get_prj_name():
     return  "\"" + get_lib_info_field('name').replace('-',' ') + "\""
     
 def get_prj_version():
-    global lib_version
-    lib_version = get_lib_info_field('version')
-    return lib_version
+    return get_lib_info_field('version')
 
 def get_prj_descr():
     return "\"" + get_lib_info_field('paragraph') + "\""
@@ -188,36 +189,49 @@ def copy_html(repo_name):
         if os.path.isfile(src):
             shutil.copy2(src, dest)
 
-def release_html():
+def git_push(user,token, repo_name):
+
+    git_proc  = subprocess.Popen([git_exe,'add','.'])
+    git_proc.wait()
+    commit_msg = "\"Automated doxygen html release v" + get_prj_version() + "\""
+    git_proc2 = subprocess.Popen([git_exe,'commit','-m',commit_msg])
+    git_proc2.wait()
+    url_with_cred = 'https://' + user + ':' + token + '@github.com/infineon/' + repo_name + '.git'
+    git_proc3 = subprocess.Popen([git_exe,'remote','set-url','origin', url_with_cred])
+    git_proc3.wait()
+    git_proc4 = subprocess.Popen([git_exe,'push','origin','gh-pages'])  
+    git_proc4.wait()
+
+def release_html(user,passw):
 
     os.chdir(lib_root)
+
     # Get the target repository urlgit 
     repo_name, url_ifx_repo_gh = get_repo_url_name()
 
-    os.chdir('./InfineonDoxyGenerator')
+    #os.chdir('./InfineonDoxyGenerator')
     # clone the original repository
     #clone_repo(url_ifx_repo_gh)
 
-    os.chdir('./' + repo_name)
+    #os.chdir('./' + repo_name)
     # Look for gh-pages branch
     #checkout_ghpages_branch()
 
     # rm any content that might exist
     #remove_old()
 
-    os.chdir('./../')
+    #os.chdir('./../')
     # copy the html folder content
-    copy_html(repo_name)
-
-    # cp docs/doxygen/build/html ./
+    #copy_html(repo_name)
 
     #os.chdir('./' + repo_name)
-    # git commit -m "Automated doxygen release version"
-    # handle credentials!!
-    # git push
-    # cd out of repository
-    # rm
+    # Push documentation and release under gh-pages
+    #git_push(user, passw, repo_name)
+
+    #os.chdir('./../')
     # rm original repository
+    #shutil.rmtree('./' + repo_name)
+
 
 def generate_pdf():
     pass
@@ -231,25 +245,66 @@ def clean():
     shutil.rmtree(build_dir)
     os.remove(doxy_dir + "/doxyfile")
 
+
 def parser_doxygen():
-    parser = argparse.ArgumentParser(description="Infineon Doxygen Generator Python Command Line")
-    parser.add_argument('--html', action='store_true', default=False, dest='gen_html', help='Generate html format')
-    parser.add_argument('--pdf', action='store_true', default=False, dest='gen_pdf', help='Generate pdf format')
-    parser.add_argument('--tool', action='store_true', default=False, dest='toolchain_cmd', help='Check doxygen toolchain version')
-    parser.add_argument('--version', action='version', version='%(prog)s 1.0.0')
-    parser.add_argument('--clean', action='store_true', default=False, dest='clean_cmd', help='Clean build')
-    parser.add_argument('--release', action='store_true', default=False, dest='release_cmd', help='Release documentation')
- 
-    parser_out = parser.parse_args()
-    if parser_out.gen_html :
+
+    def html(args):
+        print("html parser")
         generate_html()
-    if parser_out.clean_cmd :
+    
+    def pdf(args):
+        print("PDF generation NOT available :(")
+        generate_pdf()
+    
+    def clean(args):
+        print("clean parser")
         clean()
-    if parser_out.toolchain_cmd:
-        get_toolchain_ver()
-    if parser_out.release_cmd:
-        release_html()
+
+    def tools(args):
+        print("tools parser")
+        if args.version:
+            get_toolchain_ver()
+        elif args.install is not None:
+            print("installation required of not none")
+
+    def release(args):
+        print("release parser")
+        print(args.user)
+        print(args.password)
+        print(args.format)
+        release_html(args.user, args.password)
+
+    def version():
+        return "this is the version of this program"
+
+    parser    = argparse.ArgumentParser(description="Infineon Doxygen Generator Python Command Line")
+    subparsers = parser.add_subparsers()
+        
+    parser.add_argument('-v','--version', action='version', version='%(prog)s ' + version())
+
+    parser_html = subparsers.add_parser('html', help='Generate html format')
+    parser_html.set_defaults(func=html)
+
+    parser_pdf = subparsers.add_parser('pdf', help='Generate pdf format')
+    parser_pdf.set_defaults(func=pdf)
+
+    parser_clean = subparsers.add_parser('clean', help='Clean build')
+    parser_clean.set_defaults(func=clean)
+
+    parser_tools = subparsers.add_parser('tools', help='Doxygen toolchain utility')
+    parser_tools.add_argument('-i','--install', action='store', default='all', choices=['doxygen','graphviz','latex','all'], dest='install', help='Install Doxygen toolchain')
+    parser_tools.add_argument('-v','--version', action='store_true', default=False, dest='version', help='Toolchain version')
+    parser_tools.set_defaults(func=tools)
+
+    parser_release = subparsers.add_parser('release', help='Release and publish documentation')
+    parser_release.add_argument('user', type=str, help="Github user name")
+    parser_release.add_argument('password', type=str, help="Github password or token")
+    parser_release.add_argument('format', action='store', nargs='?', type=str, choices=['html','pdf','all'], default='all', help='Documentation Release Format')
+    parser_release.set_defaults(func=release)
+ 
+    args = parser.parse_args()
+    args.func(args)
 
 if __name__ == "__main__":
     parser_doxygen()
-    #checkout_ghpages_branch()
+
