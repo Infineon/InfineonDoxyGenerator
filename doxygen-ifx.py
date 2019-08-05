@@ -1,9 +1,13 @@
-import argparse, os, shutil, subprocess
+import argparse, json, os, shutil, subprocess
 
 doxygen_exe  = 'doxygen'
 git_exe      = 'git'
+grviz_exe    = 'dot'
 
-lib_root  = os.path.abspath(os.pardir)
+grviz_enabled = True
+pdf_enabled   = True
+
+lib_root  = './..'
 docs_dir  = lib_root + '/docs'
 img_dir   = lib_root + '/docs/img'
 src_dir   = lib_root + '/src'
@@ -17,24 +21,42 @@ def check_new_tag():
     pass
 
 def get_toolchain_ver():
+    """ Gets the toolchain software versions """
     git_exe     = 'git'
     doxygen_exe = 'doxygen'
-    latex_exe   = 'textlive'
-    grviz_exe   = 'graphviz'
+    latex_exe   = 'pdflatex'
+    grviz_exe   = 'dot'
     print("Git      (required):")
-    git_proc = subprocess.Popen([git_exe,'--version'])
-    git_proc.wait()
+    try:
+        git_proc = subprocess.Popen([git_exe,'--version'])
+        git_proc.wait()
+    except:
+        print('\'' + git_exe + '\'command is not recognized')
+
     print("Doxygen  (required):")
-    doxy_proc = subprocess.Popen([doxygen_exe,'--version'])
-    doxy_proc.wait()
+    try:
+        doxy_proc = subprocess.Popen([doxygen_exe,'--version'])
+        doxy_proc.wait()
+    except:
+        print('\'' + doxygen_exe + '\' command is not recognized')
+    
     print('Latex    (required for pdf):')
-    latex_proc = subprocess.Popen([latex_exe,'version'])
-    latex_proc.wait()
+    try:
+        latex_proc = subprocess.Popen([latex_exe,'--version'])
+        latex_proc.wait()
+    except:
+        print('\'' + latex_exe + '\' command is not recognized')
+        pdf_enabled = False
+
     print('Graphviz (optional):')
-    grviz_proc = subprocess.Popen([grviz_exe,'version'])
-    grviz_proc.wait()
+    try:
+        grviz_proc = subprocess.Popen([grviz_exe,'-V'])
+        grviz_proc.wait()
+    except:
+        print('\'' + grviz_exe + '\' command is not recognized')
+        grviz_enabled = False
 
-
+    
 def toolchain_install():
     pass
     # if linux
@@ -98,8 +120,10 @@ def doxyfile_config():
     if os.path.exists(doxyf_cfg):
         print("doxyfile already exists. Using project custom doxyfile")
     else:
+        doxyf_cfg = doxy_dir + "/doxyfile_auto"
         if not os.path.exists(doxy_dir):
             os.makedirs(doxy_dir)
+            
 
         with open(doxyf_cfg,'w+') as auto_doxyf:
             auto_doxyf.write("PROJECT_NAME           = " + get_prj_name() + "\n")
@@ -118,6 +142,21 @@ def doxyfile_config():
             auto_doxyf.write("IMAGE_PATH             = \n" )
             auto_doxyf.write("GENERATE_LATEX         = NO\n" )
             auto_doxyf.write("WARN_LOGFILE           = " + build_dir + "/doxygen-log.txt\n" )
+            if grviz_enabled:
+                auto_doxyf.write("HAVE_DOT               = YES\n")
+                auto_doxyf.write("CALL_GRAPH             = YES\n")
+                auto_doxyf.write("DOT_PATH               = " + "\"" + grviz_exe + "\"" + "\n")
+            if pdf_enabled:
+                auto_doxyf.write("GENERATE_LATEX         = YES\n")
+                auto_doxyf.write("USE_PDFLATEX           = YES\n")
+                auto_doxyf.write("PDF_HYPERLINKS         = YES\n")
+                auto_doxyf.write("SHOW_USED_FILES        = NO\n")
+                auto_doxyf.write("SHOW_INCLUDE_FILES     = NO\n")
+                auto_doxyf.write("SHOW_FILES             = NO\n")
+                auto_doxyf.write("LATEX_HEADER           = ./docs/latexfiles/header.tex \n")
+                auto_doxyf.write("LATEX_FOOTER           = ./docs/latexfiles/footer.tex \n")
+                
+
         auto_doxyf.close()
         
     return doxyf_cfg
@@ -143,7 +182,6 @@ def clone_repo(url):
     git_proc.wait()
 
 def checkout_ghpages_branch():
-
     git_proc = subprocess.Popen([git_exe, 'branch', '-r'],stdout=subprocess.PIPE)
     output, err = git_proc.communicate()
     git_proc.wait()
@@ -154,7 +192,7 @@ def checkout_ghpages_branch():
         git_proc2 = subprocess.Popen([git_exe, 'checkout', '--orphan', 'gh-pages'])
         git_proc2.wait()
     else:
-        print("github pages exists. Pulling and checking out to gh-pages.")
+        print("Github pages exists. Pulling and checking out to gh-pages.")
         git_proc3 = subprocess.Popen([git_exe, 'pull', 'origin', 'gh-pages'])
         git_proc3.wait()
         git_proc4 = subprocess.Popen([git_exe, 'checkout', 'gh-pages'])
@@ -241,43 +279,46 @@ def generate_pdf():
 def release_pdf():
     pass
 
-def clean():
+def clean_build():
     shutil.rmtree(build_dir)
-    os.remove(doxy_dir + "/doxyfile")
+    os.remove(doxy_dir + "/doxyfile_auto")
+
+def get_cli_ver():
+    """ Gets the CLI version from the info.json manifests """
+    with open('./info.json') as lib_info:
+        lib_info_json = json.load(lib_info)
+        version = lib_info_json['version']
+    lib_info.close()
+    return 'v.' + version 
 
 
 def parser_doxygen():
 
     def html(args):
-        print("html parser")
         generate_html()
     
     def pdf(args):
-        print("PDF generation NOT available :(")
         generate_pdf()
     
     def clean(args):
-        print("clean parser")
-        clean()
+        clean_build()
 
     def tools(args):
-        print("tools parser")
         if args.version:
             get_toolchain_ver()
         elif args.install is not None:
             print("installation required of not none")
 
     def release(args):
-        print("release parser")
         print(args.user)
         print(args.password)
         print(args.format)
         release_html(args.user, args.password)
 
     def version():
-        return "this is the version of this program"
+        return get_cli_ver()
 
-    parser    = argparse.ArgumentParser(description="Infineon Doxygen Generator Python Command Line")
+    parser     = argparse.ArgumentParser(description="Infineon Doxygen Generator Python Command Line Interface")
     subparsers = parser.add_subparsers()
         
     parser.add_argument('-v','--version', action='version', version='%(prog)s ' + version())
