@@ -106,7 +106,7 @@ def get_prj_logo():
         prj_logo = img_dir + '/lib_logo.png'
     else:
         # Default infineon logo
-        prj_logo = './docs/img/ifx_logo2.png'
+        prj_logo = './img/ifx_logo2.png'
 
     return prj_logo
 
@@ -183,7 +183,6 @@ def checkout_ghpages_branch():
     output, err = git_proc.communicate()
     git_proc.wait()
     output = str(output)
-    print("output: " + output)
     # If the branch does not exists needs to be created
     if output.find('origin/gh-pages') == -1:
         print("Github pages does not exist. Creating orphan branch.")
@@ -215,8 +214,6 @@ def copy_html(repo_name):
 
     src_dir  = build_dir + '/html'
     dest_dir = lib_root + '/InfineonDoxyGenerator/' + repo_name
-    print ("Source folder      : " + src_dir)
-    print ("Destination folder : " + dest_dir)
     dir_content = os.listdir(src_dir)
 
     for item in dir_content:
@@ -232,11 +229,10 @@ def git_push(user,token, repo_name):
     base_domain_gh = '@github.com/infineon/'
     git_proc  = subprocess.Popen([git_exe,'add','.'])
     git_proc.wait()
-    # The root has changed. 
+    # The lib root has changed
     lib_root = './../../'
     commit_msg = "\"Automated doxygen html release v" + get_prj_version() + "\""
     lib_root = './..'
-    print(commit_msg)
     git_proc2 = subprocess.Popen([git_exe,'commit','-m',commit_msg])
     git_proc2.wait()
     url_with_cred = 'https://' + user + ':' + token + base_domain_gh + repo_name + '.git'
@@ -251,8 +247,6 @@ def release_html(user,passw):
 
     # Get the target repository urlgit 
     repo_name, url_ifx_repo_gh = get_repo_url_name()
-    print("Repository name     : " + repo_name )
-    print("Repository host url : " + url_ifx_repo_gh)
 
     os.chdir('./InfineonDoxyGenerator')
     # clone the original repository
