@@ -11,7 +11,7 @@ Features:
 * Github pages realease (beta)
 * Travis CI automation (planned)
 
-# Developing doxygen documentation (How to...)
+## Developing doxygen documentation (How to...)
 
 1. Download the repository or release in the project/library root folder.
 2. Your library must follow the Arduino Library Specfication (link!)
@@ -20,27 +20,27 @@ Features:
 5. Release it manually
 6. Automate deployment in Travis CI
 
-# Other options (Customizations)
+## Other options (Customizations)
 - Custom doxyfile vs. automatically generated configuration
     -  Add additional .dox files 
     -  Custom project logo
 
-# Add automation to your repository (Travis CI integration)
+## Add automation to your repository (Travis CI integration)
 
 - travis script
 - only for new tags
 
-# Supported OS (Not yet check)
+## Supported OS (Not yet check)
     Executed in the following platforms:
     - windows
     - cygwin 
     - unix...
 
-# Troubleshooting 
+## Troubleshooting 
  - git credentials popups ?
  - error handling ? 
 
- # TODOS
+ ## TODOS
  - handle issues with paths
  - Refactor source files in modules: arduino libs doxyfile, generic doxyfile, release features
  - Add PDF 
