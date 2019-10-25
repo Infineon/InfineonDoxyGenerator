@@ -5,7 +5,8 @@ git_exe      = 'git'
 grviz_exe    = 'dot'
 
 grviz_enabled = True
-pdf_enabled   = True
+
+global lib_root
 
 lib_root  = './..'
 docs_dir  = lib_root + '/docs'
@@ -14,24 +15,27 @@ src_dir   = lib_root + '/src'
 doxy_dir  = lib_root + '/docs/doxygen'
 build_dir = lib_root + '/docs/doxygen/build'   
 
-def get_os():
-    pass
-
-def check_new_tag():
-    pass
 
 def get_toolchain_ver():
-    """ Gets the toolchain software versions """
+
+    """ 
+    Gets the toolchain software versions 
+
+    """
+
     git_exe     = 'git'
     doxygen_exe = 'doxygen'
-    latex_exe   = 'pdflatex'
     grviz_exe   = 'dot'
+
+    return_sucesss = True
+
     print("Git      (required):")
     try:
         git_proc = subprocess.Popen([git_exe,'--version'])
         git_proc.wait()
     except:
         print('\'' + git_exe + '\'command is not recognized')
+        return_sucesss = False
 
     print("Doxygen  (required):")
     try:
@@ -39,14 +43,7 @@ def get_toolchain_ver():
         doxy_proc.wait()
     except:
         print('\'' + doxygen_exe + '\' command is not recognized')
-    
-    print('Latex    (required for pdf):')
-    try:
-        latex_proc = subprocess.Popen([latex_exe,'--version'])
-        latex_proc.wait()
-    except:
-        print('\'' + latex_exe + '\' command is not recognized')
-        pdf_enabled = False
+        return_sucesss = False
 
     print('Graphviz (optional):')
     try:
@@ -56,15 +53,17 @@ def get_toolchain_ver():
         print('\'' + grviz_exe + '\' command is not recognized')
         grviz_enabled = False
 
-    
-def toolchain_install():
-    pass
-    # if linux
-    # if windows
-    # if minwg
+    return return_sucesss
 
 def get_lib_info_field(field_key):
+
+    """
+    Parses the requested field key from the library arduino manifest
+
+
+    """
     field_value = ""
+    print("library root : " + lib_root )
     if os.path.exists(lib_root + "/library.properties"):
         with open(lib_root + '/library.properties','r') as prj_file:
             prj_info = prj_file.readlines()
@@ -146,16 +145,6 @@ def doxyfile_config():
                 auto_doxyf.write("HAVE_DOT               = YES\n")
                 auto_doxyf.write("CALL_GRAPH             = YES\n")
                 auto_doxyf.write("DOT_PATH               = " + "\"" + grviz_exe + "\"" + "\n")
-            if pdf_enabled:
-                auto_doxyf.write("GENERATE_LATEX         = YES\n")
-                auto_doxyf.write("USE_PDFLATEX           = YES\n")
-                auto_doxyf.write("PDF_HYPERLINKS         = YES\n")
-                auto_doxyf.write("SHOW_USED_FILES        = NO\n")
-                auto_doxyf.write("SHOW_INCLUDE_FILES     = NO\n")
-                auto_doxyf.write("SHOW_FILES             = NO\n")
-                auto_doxyf.write("LATEX_HEADER           = ./docs/latexfiles/header.tex \n")
-                auto_doxyf.write("LATEX_FOOTER           = ./docs/latexfiles/footer.tex \n")
-                
 
         auto_doxyf.close()
         
@@ -168,23 +157,32 @@ def generate_html():
     doxy_proc = subprocess.Popen([doxygen_exe, doxyf_cfg])      
     doxy_proc.wait()
     
+
+'''
+Release on GitHub
+
+'''
+
 def get_repo_url_name():
-    url_ifx_base_gh = 'https://github.com/jaenrig/' #'https://github.com/infineon'
+    url_ifx_base_gh = 'https://github.com/infineon'
     git_proc = subprocess.Popen([git_exe, 'remote', '-v'], stdout=subprocess.PIPE)
     output, err = git_proc.communicate()
     git_proc.wait()
+    output = str(output)
     url_ifx_repo_gh = output[output.index(url_ifx_base_gh):output.index('.git') + len('.git')]
     repo_name = output[output.index(url_ifx_base_gh) + len(url_ifx_base_gh):output.index('.git')]
     return repo_name, url_ifx_repo_gh
 
-def clone_repo(url):
-    git_proc = subprocess.Popen([git_exe, 'clone', url])
-    git_proc.wait()
+def clone_repo(repo_name, url):
+    if not os.path.exists(repo_name):
+        git_proc = subprocess.Popen([git_exe, 'clone', url])
+        git_proc.wait()
 
 def checkout_ghpages_branch():
     git_proc = subprocess.Popen([git_exe, 'branch', '-r'],stdout=subprocess.PIPE)
     output, err = git_proc.communicate()
     git_proc.wait()
+    output = str(output)
     print("output: " + output)
     # If the branch does not exists needs to be created
     if output.find('origin/gh-pages') == -1:
@@ -217,6 +215,8 @@ def copy_html(repo_name):
 
     src_dir  = build_dir + '/html'
     dest_dir = lib_root + '/InfineonDoxyGenerator/' + repo_name
+    print ("Source folder      : " + src_dir)
+    print ("Destination folder : " + dest_dir)
     dir_content = os.listdir(src_dir)
 
     for item in dir_content:
@@ -228,13 +228,18 @@ def copy_html(repo_name):
             shutil.copy2(src, dest)
 
 def git_push(user,token, repo_name):
-
+    global lib_root
+    base_domain_gh = '@github.com/infineon/'
     git_proc  = subprocess.Popen([git_exe,'add','.'])
     git_proc.wait()
+    # The root has changed. 
+    lib_root = './../../'
     commit_msg = "\"Automated doxygen html release v" + get_prj_version() + "\""
+    lib_root = './..'
+    print(commit_msg)
     git_proc2 = subprocess.Popen([git_exe,'commit','-m',commit_msg])
     git_proc2.wait()
-    url_with_cred = 'https://' + user + ':' + token + '@github.com/infineon/' + repo_name + '.git'
+    url_with_cred = 'https://' + user + ':' + token + base_domain_gh + repo_name + '.git'
     git_proc3 = subprocess.Popen([git_exe,'remote','set-url','origin', url_with_cred])
     git_proc3.wait()
     git_proc4 = subprocess.Popen([git_exe,'push','origin','gh-pages'])  
@@ -246,45 +251,41 @@ def release_html(user,passw):
 
     # Get the target repository urlgit 
     repo_name, url_ifx_repo_gh = get_repo_url_name()
+    print("Repository name     : " + repo_name )
+    print("Repository host url : " + url_ifx_repo_gh)
 
-    #os.chdir('./InfineonDoxyGenerator')
+    os.chdir('./InfineonDoxyGenerator')
     # clone the original repository
-    #clone_repo(url_ifx_repo_gh)
+    clone_repo(repo_name, url_ifx_repo_gh)
 
-    #os.chdir('./' + repo_name)
+    os.chdir('./' + repo_name)
     # Look for gh-pages branch
-    #checkout_ghpages_branch()
+    checkout_ghpages_branch()
 
     # rm any content that might exist
-    #remove_old()
+    remove_old()
 
-    #os.chdir('./../')
+    os.chdir('./../')
     # copy the html folder content
-    #copy_html(repo_name)
+    copy_html(repo_name)
 
-    #os.chdir('./' + repo_name)
+    os.chdir('./' + repo_name)
     # Push documentation and release under gh-pages
-    #git_push(user, passw, repo_name)
+    git_push(user, passw, repo_name)
 
-    #os.chdir('./../')
+    os.chdir('./../')
     # rm original repository
-    #shutil.rmtree('./' + repo_name)
+    shutil.rmtree('./' + repo_name)
 
-
-def generate_pdf():
-    pass
-    # Generate pdf under docs. It is up to the user 
-    # to store it there or not
-
-def release_pdf():
-    pass
 
 def clean_build():
     shutil.rmtree(build_dir)
     os.remove(doxy_dir + "/doxyfile_auto")
 
 def get_cli_ver():
-    """ Gets the CLI version from the info.json manifests """
+    """ 
+    Gets the CLI version from the info.json manifests 
+    """
     with open('./info.json') as lib_info:
         lib_info_json = json.load(lib_info)
         version = lib_info_json['version']
@@ -292,13 +293,17 @@ def get_cli_ver():
     return 'v.' + version 
 
 
+'''
+Python Doxygen Documentation CLI Parser
+'''
+
 def parser_doxygen():
+
+    def noarg(args):
+        parser.print_help()
 
     def html(args):
         generate_html()
-    
-    def pdf(args):
-        generate_pdf()
     
     def clean(args):
         clean_build()
@@ -307,12 +312,11 @@ def parser_doxygen():
         if args.version:
             get_toolchain_ver()
         elif args.install is not None:
-            print("installation required of not none")
+            print("Installation still not available in version " + version() )
 
     def release(args):
         print(args.user)
         print(args.password)
-        print(args.format)
         release_html(args.user, args.password)
 
     def version():
@@ -320,14 +324,12 @@ def parser_doxygen():
 
     parser     = argparse.ArgumentParser(description="Infineon Doxygen Generator Python Command Line Interface")
     subparsers = parser.add_subparsers()
-        
+    parser.set_defaults(func=noarg)
+
     parser.add_argument('-v','--version', action='version', version='%(prog)s ' + version())
 
     parser_html = subparsers.add_parser('html', help='Generate html format')
     parser_html.set_defaults(func=html)
-
-    parser_pdf = subparsers.add_parser('pdf', help='Generate pdf format')
-    parser_pdf.set_defaults(func=pdf)
 
     parser_clean = subparsers.add_parser('clean', help='Clean build')
     parser_clean.set_defaults(func=clean)
@@ -340,7 +342,6 @@ def parser_doxygen():
     parser_release = subparsers.add_parser('release', help='Release and publish documentation')
     parser_release.add_argument('user', type=str, help="Github user name")
     parser_release.add_argument('password', type=str, help="Github password or token")
-    parser_release.add_argument('format', action='store', nargs='?', type=str, choices=['html','pdf','all'], default='all', help='Documentation Release Format')
     parser_release.set_defaults(func=release)
  
     args = parser.parse_args()
