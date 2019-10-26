@@ -226,7 +226,7 @@ def copy_html(repo_name):
 
 def git_push(user,token, repo_name):
     global lib_root
-    base_domain_gh = '@github.com/infineon/'
+    base_domain_gh = '@github.com/infineon'
     git_proc  = subprocess.Popen([git_exe,'add','.'])
     git_proc.wait()
     # The lib root has changed
