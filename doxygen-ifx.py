@@ -106,7 +106,7 @@ def get_prj_logo():
         prj_logo = img_dir + '/lib_logo.png'
     else:
         # Default infineon logo
-        prj_logo = './img/ifx_logo2.png'
+        prj_logo = './img/ifx_logo.png'
 
     return prj_logo
 
@@ -164,7 +164,7 @@ Release on GitHub
 '''
 
 def get_repo_url_name():
-    url_ifx_base_gh = 'https://github.com/infineon'
+    url_ifx_base_gh = 'https://github.com/Infineon'
     git_proc = subprocess.Popen([git_exe, 'remote', '-v'], stdout=subprocess.PIPE)
     output, err = git_proc.communicate()
     git_proc.wait()
