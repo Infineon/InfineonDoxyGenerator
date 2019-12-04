@@ -5,6 +5,6 @@
         "type" : "git",
         "url": "https://github.com/Infineon/InfineonDoxyGenerator.git"
     },
-    "version" : "0.1.0",
+    "version" : "0.1.4",
     "license" : "MIT"
 }
