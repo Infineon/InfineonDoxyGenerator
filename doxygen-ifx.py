@@ -63,7 +63,6 @@ def get_lib_info_field(field_key):
 
     """
     field_value = ""
-    print("library root : " + lib_root )
     if os.path.exists(lib_root + "/library.properties"):
         with open(lib_root + '/library.properties','r') as prj_file:
             prj_info = prj_file.readlines()
@@ -136,6 +135,7 @@ def doxyfile_config():
             auto_doxyf.write("USE_MDFILE_AS_MAINPAGE = " + get_prj_mainpage() + "\n")
             auto_doxyf.write("DISABLE_INDEX          = YES\n")
             auto_doxyf.write("GENERATE_TREEVIEW      = YES\n")
+            auto_doxyf.write("FULL_PATH_NAMES        = NO\n")
             auto_doxyf.write("PROJECT_LOGO           = " + get_prj_logo() + "\n")
             auto_doxyf.write("GENERATE_TODOLIST      = NO\n")        
             auto_doxyf.write("IMAGE_PATH             = \n" )
@@ -144,7 +144,6 @@ def doxyfile_config():
             if grviz_enabled:
                 auto_doxyf.write("HAVE_DOT               = YES\n")
                 auto_doxyf.write("CALL_GRAPH             = YES\n")
-                auto_doxyf.write("DOT_PATH               = " + "\"" + grviz_exe + "\"" + "\n")
 
         auto_doxyf.close()
         
