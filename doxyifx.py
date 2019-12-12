@@ -1,4 +1,4 @@
-import argparse, json, os, shutil, subprocess
+import argparse, logging, json, os, shutil, subprocess
 
 doxygen_exe  = 'doxygen'
 git_exe      = 'git'
@@ -157,28 +157,69 @@ def generate_html():
     doxy_proc.wait()
     
 
-'''
+""" 
 Release on GitHub
 
-'''
+""" 
 
-def get_repo_url_name():
-    url_ifx_base_gh = 'https://github.com/Infineon'
-    git_proc = subprocess.Popen([git_exe, 'remote', '-v'], stdout=subprocess.PIPE)
-    output, err = git_proc.communicate()
-    git_proc.wait()
+def get_repo_url():
+    """ 
+    Gets the repository url
+    """  
+    url_base_gh = 'https://github.com'
+    repo_url = ""
+
+    try:
+        git_proc = subprocess.Popen([git_exe, 'remote', '-v'], stdout=subprocess.PIPE)
+        output, err = git_proc.communicate()
+        git_proc.wait()
+    except:
+        logging.error('remote -v retrieval %s ', err)
+    
     output = str(output)
-    url_ifx_repo_gh = output[output.index(url_ifx_base_gh):output.index('.git') + len('.git')]
-    repo_name = output[output.index(url_ifx_base_gh) + len(url_ifx_base_gh):output.index('.git')]
-    return repo_name, url_ifx_repo_gh
+    if err is None : 
+        repo_url = output[output.index(url_base_gh):output.index('.git') + len('.git')]
+        
+    return repo_url
+
+def get_repo_owner(url):
+    """ 
+    Gets the repository name given the url
+    """ 
+    url_base_gh = 'https://github.com/'
+    owner_start_index = len(url_base_gh)
+    owner_end_index = url.find('/', owner_start_index)
+    repo_owner = url[owner_start_index : owner_end_index]
+    return repo_owner
+
+def get_repo_name(url):
+    """ 
+    Gets the repository owner given the url
+    """ 
+    url_base_gh = 'https://github.com/'
+    owner_start_index = len(url_base_gh) 
+    owner_end_slash_index = url.find('/', owner_start_index)
+    repo_name = url[owner_end_slash_index + 1:url.index('.git')]
+    return repo_name
+
 
 def clone_repo(repo_name, url):
+    """ 
+    Clones the repository given its url
+
+    Checks if the repository folder does not exit already
+    """ 
     if not os.path.exists(repo_name):
         git_proc = subprocess.Popen([git_exe, 'clone', url])
         git_proc.wait()
 
 def checkout_ghpages_branch():
-    git_proc = subprocess.Popen([git_exe, 'branch', '-r'],stdout=subprocess.PIPE)
+    """ 
+    Checkouts the gh-pages branch 
+
+    Creates the branch if not existing
+    """ 
+    git_proc = subprocess.Popen([git_exe, 'branch', '-r'], stdout=subprocess.PIPE)
     output, err = git_proc.communicate()
     git_proc.wait()
     output = str(output)
@@ -195,6 +236,11 @@ def checkout_ghpages_branch():
         git_proc4.wait()
 
 def remove_old():
+    """ 
+    Deletes current folder content 
+
+    To be used in gh-pages orphan branch 
+    """ 
     git_proc = subprocess.Popen([git_exe, 'rm', '-rf', '*'])
     git_proc.wait()
 
@@ -210,7 +256,10 @@ def remove_old():
             os.remove(item)
 
 def copy_html(repo_name):
-
+    """ 
+    Copies the generated html documentation from the root repository
+    to the gh-pages branch of the cloned copy
+    """ 
     src_dir  = build_dir + '/html'
     dest_dir = lib_root + '/InfineonDoxyGenerator/' + repo_name
     dir_content = os.listdir(src_dir)
@@ -223,9 +272,12 @@ def copy_html(repo_name):
         if os.path.isfile(src):
             shutil.copy2(src, dest)
 
-def git_push(user,token, repo_name):
+def git_push(user, token, repo_owner, repo_name):
+    """ 
+    Adds, commits and push changes to remote gh-pages branch
+    """ 
     global lib_root
-    base_domain_gh = '@github.com/infineon'
+    base_domain_gh = '@github.com'
     git_proc  = subprocess.Popen([git_exe,'add','.'])
     git_proc.wait()
     # The lib root has changed
@@ -234,7 +286,7 @@ def git_push(user,token, repo_name):
     lib_root = './..'
     git_proc2 = subprocess.Popen([git_exe,'commit','-m',commit_msg])
     git_proc2.wait()
-    url_with_cred = 'https://' + user + ':' + token + base_domain_gh + repo_name + '.git'
+    url_with_cred = 'https://' + user + ':' + token + base_domain_gh + '/' + repo_owner + '/' + repo_name + '.git'
     git_proc3 = subprocess.Popen([git_exe,'remote','set-url','origin', url_with_cred])
     git_proc3.wait()
     git_proc4 = subprocess.Popen([git_exe,'push','origin','gh-pages'])  
@@ -244,12 +296,18 @@ def release_html(user,passw):
 
     os.chdir(lib_root)
 
-    # Get the target repository urlgit 
-    repo_name, url_ifx_repo_gh = get_repo_url_name()
+    # Get the target repository url
+    repo_url = get_repo_url()
+
+    # Get repository name
+    repo_name = get_repo_name(repo_url)
+
+    # Get repository owner
+    repo_owner = get_repo_owner(repo_url)
 
     os.chdir('./InfineonDoxyGenerator')
     # clone the original repository
-    clone_repo(repo_name, url_ifx_repo_gh)
+    clone_repo(repo_name, repo_url)
 
     os.chdir('./' + repo_name)
     # Look for gh-pages branch
@@ -264,7 +322,7 @@ def release_html(user,passw):
 
     os.chdir('./' + repo_name)
     # Push documentation and release under gh-pages
-    git_push(user, passw, repo_name)
+    git_push(user, passw, repo_owner, repo_name)
 
     os.chdir('./../')
     # rm original repository
@@ -277,7 +335,7 @@ def clean_build():
 
 def get_cli_ver():
     """ 
-    Gets the CLI version from the info.json manifests 
+    Gets the program version from the info.json manifests 
     """
     with open('./info.json') as lib_info:
         lib_info_json = json.load(lib_info)
@@ -286,9 +344,9 @@ def get_cli_ver():
     return 'v.' + version 
 
 
-'''
+""" 
 Python Doxygen Documentation CLI Parser
-'''
+""" 
 
 def parser_doxygen():
 
@@ -308,8 +366,6 @@ def parser_doxygen():
             print("Installation still not available in version " + version() )
 
     def release(args):
-        print(args.user)
-        print(args.password)
         release_html(args.user, args.password)
 
     def version():
