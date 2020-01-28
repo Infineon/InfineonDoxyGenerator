@@ -132,6 +132,8 @@ def doxyfile_config():
             auto_doxyf.write("EXTRACT_ALL            = YES\n")
             auto_doxyf.write("INPUT                  = " + get_prj_input() + "\n")
             auto_doxyf.write("RECURSIVE              = YES\n")
+            auto_doxyf.write("ENABLE_PREPROCESSING   = NO\n")
+            auto_doxyf.write("SORT_MEMBER_DOCS       = NO\n")
             auto_doxyf.write("USE_MDFILE_AS_MAINPAGE = " + get_prj_mainpage() + "\n")
             auto_doxyf.write("DISABLE_INDEX          = YES\n")
             auto_doxyf.write("GENERATE_TREEVIEW      = YES\n")
